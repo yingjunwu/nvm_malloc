@@ -22,13 +22,13 @@
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 
-inline void error_and_exit(char *msg, ...) {
-    va_list args;
-    va_start(args, msg);
-    vfprintf(stderr, msg, args);
-    va_end(args);
-    exit(-1);
-}
+// inline void error_and_exit(char *msg, ...) {
+//     va_list args;
+//     va_start(args, msg);
+//     vfprintf(stderr, msg, args);
+//     va_end(args);
+//     exit(-1);
+// }
 
 static void            *chunk_region_start = NULL;
        void            *meta_info = NULL; /* must be non-static as it is exported to other translation units */
@@ -64,7 +64,7 @@ inline int open_existing_file(char *path) {
     if (stat(path, &stbuf) < 0) {
         return -1;
     } else if ((fd = open(path, O_RDWR)) < 0) {
-        error_and_exit("unable to open file %s\n", path);
+        // error_and_exit("unable to open file %s\n", path);
     }
     return fd;
 }
@@ -73,10 +73,11 @@ inline int open_empty_or_create_file(char *path) {
     int fd=-1;
     struct stat stbuf;
     if (stat(path, &stbuf) < 0) {
-        if ((fd = open(path, O_RDWR|O_CREAT, 0666)) < 0)
-            error_and_exit("unable to create file %s\n", path);
+        if ((fd = open(path, O_RDWR|O_CREAT, 0666)) < 0) {
+            // error_and_exit("unable to create file %s\n", path);
+        }
     } else if ((fd = open(path, O_RDWR|O_TRUNC)) < 0) {
-            error_and_exit("unable to open file %s\n", path);
+            // error_and_exit("unable to open file %s\n", path);
     }
     return fd;
 }
@@ -95,7 +96,7 @@ void* initalize_nvm_space(const char *workspace_path, uint64_t max_num_chunks) {
 
     // perform initial request for large memory block, CHUNK_SIZE *must* be a multiple of 2mb
     if ((chunk_region_start = mmap(NULL, max_chunks*CHUNK_SIZE, PROT_NONE, MAP_SHARED|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0)) == MAP_FAILED) {
-        error_and_exit("Unable to mmap initial block of %lu chunks\n", max_chunks);
+        // error_and_exit("Unable to mmap initial block of %lu chunks\n", max_chunks);
     }
 
     base_path_length = strlen(workspace_path);
@@ -111,15 +112,16 @@ void initialize_chunks() {
     backing_file_fd = open_empty_or_create_file(backing_file_path);
     /* >>>> HACK begin: call nvm_fallocate with 1MB first to prevent PMFS from switching to huge pages */
     if (nvm_fallocate(backing_file_fd, 0, 1024*1024) != 0)
-        error_and_exit("unable to ensure file size of %s", backing_file_path);
+        // error_and_exit("unable to ensure file size of %s", backing_file_path);
     /* <<<< HACK end */
 
     /* open new meta file */
     meta_file_fd = open_empty_or_create_file(meta_file_path);
     if (nvm_fallocate(meta_file_fd, 0, BLOCK_SIZE) != 0)
-        error_and_exit("unable to ensure file size of %s", meta_file_path);
-    if ((meta_info = mmap(NULL, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_NORESERVE, meta_file_fd, 0)) == MAP_FAILED)
-        error_and_exit("error mapping meta info\n");
+        // error_and_exit("unable to ensure file size of %s", meta_file_path);
+    if ((meta_info = mmap(NULL, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_NORESERVE, meta_file_fd, 0)) == MAP_FAILED) {
+        // error_and_exit("error mapping meta info\n");
+    }
 }
 
 uint64_t recover_chunks() {
@@ -132,13 +134,14 @@ uint64_t recover_chunks() {
     next_chunk = n_bytes / CHUNK_SIZE;
     backing_file_fd = open_existing_file(backing_file_path);
     if (mmap(next_chunk_addr, n_bytes, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_NORESERVE|MAP_FIXED, backing_file_fd, 0) == MAP_FAILED) {
-        error_and_exit("unable to mmap %s\n", backing_file_path);
+        // error_and_exit("unable to mmap %s\n", backing_file_path);
     }
 
     /* open existing meta file */
     meta_file_fd = open_existing_file(meta_file_path);
-    if ((meta_info = mmap(NULL, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_NORESERVE, meta_file_fd, 0)) == MAP_FAILED)
-        error_and_exit("error mapping meta info\n");
+    if ((meta_info = mmap(NULL, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_NORESERVE, meta_file_fd, 0)) == MAP_FAILED) {
+        // error_and_exit("error mapping meta info\n");
+    }
 
     return next_chunk;
 }
@@ -151,15 +154,15 @@ void* activate_more_chunks(uint64_t n_chunks) {
     /* first check if we would overflow our max with the request */
     if (next_chunk + n_chunks > max_chunks) {
         pthread_mutex_unlock(&chunk_mtx);
-        error_and_exit("Requested too many chunks\n");
+        // error_and_exit("Requested too many chunks\n");
     }
 
     next_chunk_addr = (void*) ((uintptr_t)chunk_region_start + next_chunk*CHUNK_SIZE);
 
     if (nvm_fallocate(backing_file_fd, next_chunk*CHUNK_SIZE, n_chunks*CHUNK_SIZE) != 0)
-        error_and_exit("unable to increase file size of %s", backing_file_path);
+        // error_and_exit("unable to increase file size of %s", backing_file_path);
     if (mmap(next_chunk_addr, n_chunks*CHUNK_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_NORESERVE|MAP_FIXED, backing_file_fd, next_chunk*CHUNK_SIZE) == MAP_FAILED)
-        error_and_exit("error mapping chunks");
+        // error_and_exit("error mapping chunks");
 
     next_chunk += n_chunks;
 
