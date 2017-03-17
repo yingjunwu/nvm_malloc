@@ -2,7 +2,7 @@ CXX ?= g++
 CXXFLAGS := -std=c++11 -Wall -Isrc -I../src
 debug:   CXXFLAGS += -O0 -ggdb
 release: CXXFLAGS += -O3
-LDFLAGS := -L.. -lpthread -ltbb -lnvmmalloc
+LDFLAGS := -L.. -pthread -lpthread -ltbb -lnvmmalloc
 
 SRCDIR := src
 BUILDDIR := build
