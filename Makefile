@@ -1,6 +1,6 @@
 CC := gcc
-debug:   CFLAGS := -O0 -ggdb -fpic -Wall -I. -Iulib-svn/include
-release: CFLAGS := -O3 -fpic -Wall -I. -Iulib-svn/include
+debug:   CFLAGS := -O0 -ggdb -fpic -Wall -I. -Iulib-svn/include -pthread -lpthread
+release: CFLAGS := -O3 -fpic -Wall -I. -Iulib-svn/include -pthread -lpthread
 LDFLAGS := -lpthread
 
 SRCDIR := src
